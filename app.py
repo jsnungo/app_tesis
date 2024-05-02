@@ -79,12 +79,12 @@ if st.session_state.active:
     # st.write(type_data, index)
     load_audio(audio_obj['audio'])
 
-    is_gen_ptg = st.slider('Que tan falso cree que es en procentaje [%]', 0, 100,  on_change=keep_wating(), disabled=st.session_state.slider)
+    is_gen_ptg = st.slider('Lo acepta como un dato real', 1, 5, step=5, on_change=keep_wating(), disabled=st.session_state.slider)
 
     st.button('Confirmar', on_click=freeze_slider, disabled=st.session_state.slider)
 
     if st.session_state.slider:
-        res = "Generado" if is_gen_ptg > 50 else "Real"
+        res = "Generado" if is_gen_ptg < 3 else "Real"
         check = "Mal❌"
         if type_data == 'Generado':
             st.session_state.cant_gen += 1
