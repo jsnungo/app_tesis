@@ -2,8 +2,14 @@ import pickle
 import random
 
 import streamlit as st
-
+from streamlit_gsheets import GSheetsConnection
 import matplotlib.pyplot as plt
+
+import pandas as pd
+from datetime import datetime
+
+
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 with open('./data/audios_to_human_test.pkl', 'rb') as f:
     audios = pickle.load(f)
@@ -39,6 +45,15 @@ def active():
     st.session_state.tp_real = 0
     st.session_state.tp_gen = 0
 
+    data = conn.read(worksheet='Asignacion', usecols=list(range(2)), ttl=10)
+    idx_sheet = data['Ocupacion'].idxmin()
+    to_load_sheet = data.loc[idx_sheet, 'Hoja']
+    st.session_state.sheet_name = to_load_sheet
+
+    data.loc[idx_sheet, 'Ocupacion'] = 1
+    conn.update(worksheet='Asignacion', data=data)
+    data = conn.read(worksheet=to_load_sheet, usecols=list(range(4))).dropna().to_dict('list')
+    st.session_state.df_results = data
 
 
 def keep_wating():
@@ -62,11 +77,11 @@ if 'active' not in st.session_state:
 
 if not st.session_state.active:
     st.button('Comenzar', on_click=active)
-
+    
 
 if st.session_state.active:
 
-    st.write('# Widget interactivo')
+    st.write(f'# Widget interactivo {(st.session_state.cant_gen + st.session_state.cant_real)}')
     if not st.session_state.wating:
         type_data, index = get_index()
         st.session_state.type_data = type_data
@@ -97,8 +112,21 @@ if st.session_state.active:
                 st.session_state.tp_real += 1
                 check = "Bien✅ "
 
+        dict_results = st.session_state.df_results
+        dict_results['Fecha'].append(datetime.now())
+        dict_results['Tipo '].append(type_data)
+        dict_results['Audio'].append(audios[type_data][index]['root'])
+        dict_results['Calificación'].append(is_gen_ptg)
+
+        if (st.session_state.cant_gen + st.session_state.cant_real) % 5 == 0: 
+            sheet_name = st.session_state.sheet_name
+            
+            data = pd.DataFrame(dict_results)
+            conn.update(worksheet=sheet_name, data=data)
+
         st.write(f"Se marcó como {res} y realmente es {type_data}. La respuesta está {check}")
         st.button("Siguiente Audio", on_click=stop_wating)
+
 
     st.write('# Resultados')
 
