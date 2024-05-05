@@ -75,7 +75,16 @@ if 'active' not in st.session_state:
 # Function to load and play the audio file 
 
 
+
+with st.sidebar:
+    st.write("En la barra de la izquierda tiene la muestra de datos reales con lo que puede entrenar su oido")
+    for i in [2, 100, 400, 600, 503, 100, 50]:
+        array = audios["Real"][i]["audio"]
+        st.audio(array, sample_rate=16_000)
+
 if not st.session_state.active:
+    st.write("# Marcación de audios")
+    st.write("Para el siguiente ejercico debe calificar que tal real le parece el audio. Asignandole una notra de 1 a 5.")
     st.button('Comenzar', on_click=active)
     
 
@@ -128,25 +137,25 @@ if st.session_state.active:
         st.button("Siguiente Audio", on_click=stop_wating)
 
 
-    st.write('# Resultados')
+    # st.write('# Resultados')
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 8))
+    # fig, axes = plt.subplots(1, 2, figsize=(10, 8))
 
-    # Define the data
-    cant = st.session_state.cant_gen
-    tp = st.session_state.tp_gen
-    value_1 = tp/cant if cant != 0 else 0.5
-    data = [value_1, 1 - value_1]
-    labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
-    axes[0].pie(data, labels=labels, autopct="%1.1f%%")
-    axes[0].set_title("Generados")
+    # # Define the data
+    # cant = st.session_state.cant_gen
+    # tp = st.session_state.tp_gen
+    # value_1 = tp/cant if cant != 0 else 0.5
+    # data = [value_1, 1 - value_1]
+    # labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
+    # axes[0].pie(data, labels=labels, autopct="%1.1f%%")
+    # axes[0].set_title("Generados")
 
-    cant = st.session_state.cant_real
-    tp = st.session_state.tp_real
-    value_1 = tp/cant if cant != 0 else 0.5
-    data = [value_1, 1 - value_1]
-    labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
-    axes[1].pie(data, labels=labels, autopct="%1.1f%%")
-    axes[1].set_title("Reales")
+    # cant = st.session_state.cant_real
+    # tp = st.session_state.tp_real
+    # value_1 = tp/cant if cant != 0 else 0.5
+    # data = [value_1, 1 - value_1]
+    # labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
+    # axes[1].pie(data, labels=labels, autopct="%1.1f%%")
+    # axes[1].set_title("Reales")
 
-    st.pyplot(fig)
+    # st.pyplot(fig)
