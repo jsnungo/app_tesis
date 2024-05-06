@@ -77,20 +77,24 @@ if 'active' not in st.session_state:
 
 
 with st.sidebar:
-    st.write("En la barra de la izquierda tiene la muestra de datos reales con lo que puede entrenar su oido")
+    st.write("En la barra de la izquierda tiene la muestra de datos reales con los que puede entrenar su oído.")
     for i in [2, 100, 400, 600, 503, 100, 50]:
         array = audios["Real"][i]["audio"]
         st.audio(array, sample_rate=16_000)
 
 if not st.session_state.active:
     st.write("# Marcación de audios")
-    st.write("Para el siguiente ejercico debe calificar que tal real le parece el audio. Asignandole una notra de 1 a 5.")
+    st.write("Para el siguiente ejercicio debe calificar que tan real le parece el audio. Asignandole una nota de 1 a 5.")
     st.button('Comenzar', on_click=active)
     
 
 if st.session_state.active:
 
-    st.write(f'# Widget interactivo {(st.session_state.cant_gen + st.session_state.cant_real)}')
+    st.write(f'## Widget interactivo')
+    st.write(f"""
+        Cada 20 audios marcados pordrá ver los resultados de sus marcaciones.
+        Actualmente lleva ({(st.session_state.cant_gen + st.session_state.cant_real) % 20} / 20)
+        """)
     if not st.session_state.wating:
         type_data, index = get_index()
         st.session_state.type_data = type_data
@@ -103,7 +107,7 @@ if st.session_state.active:
     # st.write(type_data, index)
     load_audio(audio_obj['audio'])
 
-    is_gen_ptg = st.slider('Lo acepta como un dato real', 1, 5, step=1, on_change=keep_wating(), disabled=st.session_state.slider)
+    is_gen_ptg = st.slider('Lo acepta como un dato real. (1 = Generado | 5 = Real)', 1, 5, step=1, on_change=keep_wating(), disabled=st.session_state.slider)
 
     st.button('Confirmar', on_click=freeze_slider, disabled=st.session_state.slider)
 
@@ -137,25 +141,27 @@ if st.session_state.active:
         st.button("Siguiente Audio", on_click=stop_wating)
 
 
-    # st.write('# Resultados')
+    if (st.session_state.cant_gen + st.session_state.cant_real) % 5 == 0\
+        and (st.session_state.cant_gen + st.session_state.cant_real) > 0:
+        st.write('# Resultados')
 
-    # fig, axes = plt.subplots(1, 2, figsize=(10, 8))
+        fig, axes = plt.subplots(1, 2, figsize=(10, 8))
 
-    # # Define the data
-    # cant = st.session_state.cant_gen
-    # tp = st.session_state.tp_gen
-    # value_1 = tp/cant if cant != 0 else 0.5
-    # data = [value_1, 1 - value_1]
-    # labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
-    # axes[0].pie(data, labels=labels, autopct="%1.1f%%")
-    # axes[0].set_title("Generados")
+        # Define the data
+        cant = st.session_state.cant_gen
+        tp = st.session_state.tp_gen
+        value_1 = tp/cant if cant != 0 else 0.5
+        data = [value_1, 1 - value_1]
+        labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
+        axes[0].pie(data, labels=labels, autopct="%1.1f%%")
+        axes[0].set_title("Generados")
 
-    # cant = st.session_state.cant_real
-    # tp = st.session_state.tp_real
-    # value_1 = tp/cant if cant != 0 else 0.5
-    # data = [value_1, 1 - value_1]
-    # labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
-    # axes[1].pie(data, labels=labels, autopct="%1.1f%%")
-    # axes[1].set_title("Reales")
+        cant = st.session_state.cant_real
+        tp = st.session_state.tp_real
+        value_1 = tp/cant if cant != 0 else 0.5
+        data = [value_1, 1 - value_1]
+        labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
+        axes[1].pie(data, labels=labels, autopct="%1.1f%%")
+        axes[1].set_title("Reales")
 
-    # st.pyplot(fig)
+        st.pyplot(fig)
