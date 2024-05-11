@@ -8,160 +8,125 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from datetime import datetime
 
-
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-with open('./data/audios_to_human_test.pkl', 'rb') as f:
-    audios = pickle.load(f)
-
-real_audios_index = list(range(len(audios['Real'])))
-random.shuffle(real_audios_index)
-
-gen_audios_index = list(range(len(audios['Generado'])))
-random.shuffle(gen_audios_index)
 
 
-def get_index():
+def get_list_audios(audios):
     p_value = random.uniform(0, 1)
     type_data = 'Real' if p_value < 0.5 else 'Generado'
-    if type_data == "Real":
-        index = real_audios_index.pop(0)
-    else:
-        index = gen_audios_index.pop(0)
-
-    return type_data, index
-
-def load_audio(array):
-    st.audio(array, sample_rate=16_000)
+    # st.write(type_data)
+    list_audios = random.choices(audios[type_data], k=10)
+    
+    return list_audios
 
 def active():
     # Variables de ambiente
     st.session_state.active = True
-    st.session_state.wating = False
-    st.session_state.slider = False
-
-    st.session_state.cant_real = 0
-    st.session_state.cant_gen = 0
-    st.session_state.tp_real = 0
-    st.session_state.tp_gen = 0
-
+    
     data = conn.read(worksheet='Asignacion', usecols=list(range(2)), ttl=10)
     idx_sheet = data['Ocupacion'].idxmin()
     to_load_sheet = data.loc[idx_sheet, 'Hoja']
     st.session_state.sheet_name = to_load_sheet
 
-    data.loc[idx_sheet, 'Ocupacion'] = 1
+    data.loc[idx_sheet, 'Ocupacion'] += 1
     conn.update(worksheet='Asignacion', data=data)
     data = conn.read(worksheet=to_load_sheet, usecols=list(range(4))).dropna().to_dict('list')
+
     st.session_state.df_results = data
 
+def save():
+    st.session_state.saved = True
 
-def keep_wating():
-    st.session_state.wating = True
+    sheet_name = st.session_state.sheet_name
+    dict_results = st.session_state.df_results
 
-def stop_wating():
-    st.session_state.wating = False
-    st.session_state.slider = False
+    new_results = st.session_state.results
+    list_audios = st.session_state.list_audios 
 
-    
+    date = datetime.now()
+    audio_type = 'Real' if list_audios[0]["real"] else "Generado"
+    for i, audio in enumerate(list_audios):
+        dict_results['Fecha'].append(date)
+        dict_results['Audio'].append(audio['root'])
+        dict_results['Tipo '].append(audio_type)
+        dict_results['Calificación'].append(new_results[i])
 
-def freeze_slider():
-    st.session_state.slider = True
+    data = pd.DataFrame(dict_results)
+    conn.update(worksheet=sheet_name, data=data)
+
 
 if 'active' not in st.session_state:
+    with open('./data/real.pkl', 'rb') as f:
+        audios_real = pickle.load(f)
+
+    st.session_state.audios_real = random.choices(audios_real, k=20)
+    
     st.session_state.active = False
-
-
-# Function to load and play the audio file 
-
+    st.session_state.saved = False
+    
 
 
 with st.sidebar:
     st.write("En la barra de la izquierda tiene la muestra de datos reales con los que puede entrenar su oído.")
-    for i in [2, 100, 400, 600, 503, 100, 50]:
-        array = audios["Real"][i]["audio"]
-        st.audio(array, sample_rate=16_000)
+    audios_real = st.session_state.audios_real
+    for a in audios_real:
+        st.audio(a, sample_rate=16_000)
 
 if not st.session_state.active:
     st.write("# Marcación de audios")
-    st.write("Para el siguiente ejercicio debe calificar que tan real le parece el audio. Asignandole una nota de 1 a 5.")
+    st.write("""
+        Para el siguiente ejercicio va recibir diez audios para que determine si son reales o generados.
+             
+        ⬅️ En La barra de la izquierda va a encontrar audios reales de croacs de la Boana Faber que le permitiran entrenar su oido.
+    """)
+    with open('./data/audios_to_human_test.pkl', 'rb') as f:
+        audios = pickle.load(f)
+
+    st.session_state.list_audios  = get_list_audios(audios)
+
     st.button('Comenzar', on_click=active)
-    
+
+
+
 
 if st.session_state.active:
+    list_audios = st.session_state.list_audios 
 
-    st.write(f'## Widget interactivo')
-    st.write(f"""
-        Cada 20 audios marcados pordrá ver los resultados de sus marcaciones.
-        Actualmente lleva ({(st.session_state.cant_gen + st.session_state.cant_real) % 20} / 20)
-        """)
-    if not st.session_state.wating:
-        type_data, index = get_index()
-        st.session_state.type_data = type_data
-        st.session_state.index = index
+    type_1 = []
 
-    type_data = st.session_state.type_data
-    index = st.session_state.index
+    ANSWERS = ['Real', 'Generado']
+    for i, audio in enumerate(list_audios):
+        
+        with st.container(border=True):
+            col1, col2 = st.columns(2)
 
-    audio_obj = audios[type_data][index]
-    # st.write(type_data, index)
-    load_audio(audio_obj['audio'])
+            with col1:
+                st.audio(audio['audio'], sample_rate=16_000)
+            with col2:
+                response = st.radio(
+                    label="Este audio es:",
+                    index=None,                
+                    options=ANSWERS,
+                    key=i,  # here
+                    horizontal=True, 
+                    disabled=st.session_state.saved
+                )
+                type_1.append(response)
+                if st.session_state.saved:
+                    res_is_real = type_1[i] == "Real"
+                    is_real = audio['real']
+                    if res_is_real ==  is_real:
+                        st.write("Respondió bien ✅")
+                    else:
+                        st.write("Respondió mal ❌")
+    
+    if not st.session_state.saved:
+        st.session_state.results = type_1
+        st.button(
+            "Guardar respuestas",
+            disabled=None in type_1,
+            help="Para activar el boton debe terminar de marcar todas las respuestas.",
+            on_click=save
+        )
 
-    is_gen_ptg = st.slider('Lo acepta como un dato real. (1 = Generado | 5 = Real)', 1, 5, step=1, on_change=keep_wating(), disabled=st.session_state.slider)
-
-    st.button('Confirmar', on_click=freeze_slider, disabled=st.session_state.slider)
-
-    if st.session_state.slider:
-        res = "Generado" if is_gen_ptg < 3 else "Real"
-        check = "Mal❌"
-        if type_data == 'Generado':
-            st.session_state.cant_gen += 1
-            if type_data == res:
-                st.session_state.tp_gen += 1
-                check = "Bien✅ "
-        else:
-            st.session_state.cant_real += 1
-            if type_data == res:
-                st.session_state.tp_real += 1
-                check = "Bien✅ "
-
-        dict_results = st.session_state.df_results
-        dict_results['Fecha'].append(datetime.now())
-        dict_results['Tipo '].append(type_data)
-        dict_results['Audio'].append(audios[type_data][index]['root'])
-        dict_results['Calificación'].append(is_gen_ptg)
-
-        if (st.session_state.cant_gen + st.session_state.cant_real) % 5 == 0: 
-            sheet_name = st.session_state.sheet_name
-            
-            data = pd.DataFrame(dict_results)
-            conn.update(worksheet=sheet_name, data=data)
-
-        st.write(f"Se marcó como {res} y realmente es {type_data}. La respuesta está {check}")
-        st.button("Siguiente Audio", on_click=stop_wating)
-
-
-    if (st.session_state.cant_gen + st.session_state.cant_real) % 5 == 0\
-        and (st.session_state.cant_gen + st.session_state.cant_real) > 0:
-        st.write('# Resultados')
-
-        fig, axes = plt.subplots(1, 2, figsize=(10, 8))
-
-        # Define the data
-        cant = st.session_state.cant_gen
-        tp = st.session_state.tp_gen
-        value_1 = tp/cant if cant != 0 else 0.5
-        data = [value_1, 1 - value_1]
-        labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
-        axes[0].pie(data, labels=labels, autopct="%1.1f%%")
-        axes[0].set_title("Generados")
-
-        cant = st.session_state.cant_real
-        tp = st.session_state.tp_real
-        value_1 = tp/cant if cant != 0 else 0.5
-        data = [value_1, 1 - value_1]
-        labels = [f'Bien = {tp}', f'Mal = {cant - tp}']
-        axes[1].pie(data, labels=labels, autopct="%1.1f%%")
-        axes[1].set_title("Reales")
-
-        st.pyplot(fig)
